@@ -22,7 +22,7 @@
 
 AdmyBrand Vision Pro is a comprehensive analytics dashboard designed for digital marketing agencies and businesses. It provides real-time insights into campaign performance, audience analytics, and market data with an intuitive and modern interface.
 
-**Live Demo**: [https://admybrand-vision-pro.lovable.app](https://admybrand-vision-pro.lovable.app)
+**Live Demo**: [https://admybrand-vision-pro.vercel.app/](https://admybrand-vision-pro.vercel.app/)
 
 ##  Features
 
