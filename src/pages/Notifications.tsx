@@ -1,80 +1,117 @@
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { Bell, CheckCircle, AlertTriangle, Info, Settings } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { Bell, CheckCircle, AlertTriangle, Info, Settings, RefreshCw, Activity } from "lucide-react"
+import { marketingAnalyticsService, type AnalyticsData } from "@/lib/market-data"
 
-const notifications = [
-  {
-    id: 1,
-    type: "success",
-    title: "Campaign Performance Alert",
-    message: "Your 'Summer Sale' campaign has exceeded its ROAS target by 25%",
-    time: "2 minutes ago",
-    read: false
-  },
-  {
-    id: 2,
-    type: "warning",
-    title: "Budget Threshold Reached",
-    message: "Facebook Ads campaign has reached 80% of monthly budget",
-    time: "15 minutes ago",
-    read: false
-  },
-  {
-    id: 3,
-    type: "info",
-    title: "Weekly Report Available",
-    message: "Your weekly performance report is ready for download",
-    time: "1 hour ago",
-    read: true
-  },
-  {
-    id: 4,
-    type: "success",
-    title: "Conversion Goal Achieved",
-    message: "Congratulations! You've reached this month's conversion target",
-    time: "3 hours ago",
-    read: true
-  },
-  {
-    id: 5,
-    type: "warning",
-    title: "Low Performing Keywords",
-    message: "5 keywords in Google Ads have low quality scores",
-    time: "1 day ago",
-    read: true
-  }
-]
+interface Notification {
+  id: number
+  type: 'success' | 'warning' | 'error' | 'info'
+  title: string
+  message: string
+  time: string
+  read: boolean
+  campaign?: string
+  metric?: string
+  value?: number
+}
 
-const notificationSettings = [
-  {
-    category: "Campaign Alerts",
-    description: "Get notified about campaign performance changes",
-    enabled: true
-  },
-  {
-    category: "Budget Warnings",
-    description: "Receive alerts when budgets reach thresholds",
-    enabled: true
-  },
-  {
-    category: "Weekly Reports",
-    description: "Automatic weekly performance summaries",
-    enabled: false
-  },
-  {
-    category: "Goal Achievements",
-    description: "Celebrate when targets are reached",
-    enabled: true
-  },
-  {
-    category: "System Updates",
-    description: "Important platform and feature updates",
-    enabled: false
+const generateNotifications = (data: AnalyticsData): Notification[] => {
+  const notifications: Notification[] = []
+  let id = 1
+
+  // Check campaign performance
+  data.campaigns.forEach(campaign => {
+    if (campaign.roas > 5) {
+      notifications.push({
+        id: id++,
+        type: 'success',
+        title: 'Excellent ROAS Performance',
+        message: `${campaign.name} on ${campaign.platform} has achieved ${campaign.roas.toFixed(1)}x ROAS`,
+        time: '2 minutes ago',
+        read: false,
+        campaign: campaign.name,
+        metric: 'ROAS',
+        value: campaign.roas
+      })
+    } else if (campaign.roas < 2) {
+      notifications.push({
+        id: id++,
+        type: 'warning',
+        title: 'Low ROAS Alert',
+        message: `${campaign.name} on ${campaign.platform} has low ROAS of ${campaign.roas.toFixed(1)}x`,
+        time: '5 minutes ago',
+        read: false,
+        campaign: campaign.name,
+        metric: 'ROAS',
+        value: campaign.roas
+      })
+    }
+
+    if (campaign.spend > 10000) {
+      notifications.push({
+        id: id++,
+        type: 'warning',
+        title: 'High Spend Alert',
+        message: `${campaign.platform} campaign spend has reached $${campaign.spend.toLocaleString()}`,
+        time: '15 minutes ago',
+        read: false,
+        campaign: campaign.name,
+        metric: 'Spend',
+        value: campaign.spend
+      })
+    }
+  })
+
+  // Brand metrics notifications
+  if (data.brandMetrics.brandSentiment > 85) {
+    notifications.push({
+      id: id++,
+      type: 'success',
+      title: 'Positive Brand Sentiment',
+      message: `Brand sentiment is at an excellent ${data.brandMetrics.brandSentiment.toFixed(1)}%`,
+      time: '30 minutes ago',
+      read: true,
+      metric: 'Brand Sentiment',
+      value: data.brandMetrics.brandSentiment
+    })
   }
-]
+
+  if (data.brandMetrics.socialMentions > 1200) {
+    notifications.push({
+      id: id++,
+      type: 'info',
+      title: 'High Social Engagement',
+      message: `Your brand has ${data.brandMetrics.socialMentions} social mentions this week`,
+      time: '1 hour ago',
+      read: true,
+      metric: 'Social Mentions',
+      value: data.brandMetrics.socialMentions
+    })
+  }
+
+  // Revenue notifications
+  if (data.campaignMetrics.revenue > 35000) {
+    notifications.push({
+      id: id++,
+      type: 'success',
+      title: 'Revenue Target Exceeded',
+      message: `Monthly revenue has reached $${data.campaignMetrics.revenue.toLocaleString()}`,
+      time: '2 hours ago',
+      read: true,
+      metric: 'Revenue',
+      value: data.campaignMetrics.revenue
+    })
+  }
+
+  return notifications.sort((a, b) => (a.read ? 1 : 0) - (b.read ? 1 : 0))
+}
+
+
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -103,18 +140,118 @@ const getNotificationColor = (type: string) => {
 }
 
 export default function Notifications() {
+  const { toast } = useToast()
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [notificationSettings, setNotificationSettings] = useState([
+    {
+      category: "Campaign Alerts",
+      description: "Get notified about campaign performance changes",
+      enabled: true
+    },
+    {
+      category: "Budget Warnings",
+      description: "Receive alerts when budgets reach thresholds",
+      enabled: true
+    },
+    {
+      category: "Weekly Reports",
+      description: "Automatic weekly performance summaries",
+      enabled: false
+    },
+    {
+      category: "Goal Achievements",
+      description: "Celebrate when targets are reached",
+      enabled: true
+    },
+    {
+      category: "System Updates",
+      description: "Important platform and feature updates",
+      enabled: false
+    }
+  ])
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+
+  useEffect(() => {
+    // Subscribe to real-time data updates
+    const unsubscribe = marketingAnalyticsService.subscribe((data) => {
+      setAnalyticsData(data)
+      const newNotifications = generateNotifications(data)
+      setNotifications(newNotifications)
+      setLastUpdated(new Date())
+    })
+
+    return unsubscribe
+  }, [])
+
+  const handleMarkAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    toast({
+      title: "Notifications Updated",
+      description: "All notifications marked as read",
+    })
+  }
+
+  const handleNotificationClick = (notificationId: number) => {
+    setNotifications(prev => 
+      prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+    )
+  }
+
+  const handleSettingToggle = (index: number) => {
+    setNotificationSettings(prev => 
+      prev.map((setting, i) => 
+        i === index ? { ...setting, enabled: !setting.enabled } : setting
+      )
+    )
+    toast({
+      title: "Settings Updated",
+      description: "Notification preferences have been saved",
+    })
+  }
+
+  const handleSavePreferences = () => {
+    toast({
+      title: "Preferences Saved",
+      description: "Your notification settings have been updated",
+    })
+  }
+
+  const unreadCount = notifications.filter(n => !n.read).length
+  const thisWeekCount = notifications.length
+  const alertsCount = notifications.filter(n => n.type === 'warning' || n.type === 'error').length
+  const activeSettingsCount = notificationSettings.filter(s => s.enabled).length
+
+  if (!analyticsData) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="flex items-center gap-2">
+            <Activity className="h-6 w-6 animate-pulse" />
+            <span>Loading notifications...</span>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold gradient-text">Notifications</h1>
-            <p className="text-muted-foreground">Stay updated with your campaign alerts and system notifications</p>
+            <p className="text-muted-foreground">Real-time campaign alerts and system notifications</p>
           </div>
-          <Button variant="outline" className="hover-glow">
-            <Settings className="w-4 h-4 mr-2" />
-            Preferences
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-muted-foreground">
+              Last updated: {lastUpdated.toLocaleTimeString()}
+            </div>
+            <Button variant="outline" className="hover-glow" onClick={() => window.location.reload()}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -124,7 +261,7 @@ export default function Notifications() {
               <Bell className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">2</div>
+              <div className="text-2xl font-bold">{unreadCount}</div>
               <p className="text-xs text-muted-foreground">New notifications</p>
             </CardContent>
           </Card>
@@ -132,10 +269,10 @@ export default function Notifications() {
           <Card className="glass-card hover-lift">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">This Week</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              <Bell className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">15</div>
+              <div className="text-2xl font-bold">{thisWeekCount}</div>
               <p className="text-xs text-muted-foreground">Total notifications</p>
             </CardContent>
           </Card>
@@ -146,7 +283,7 @@ export default function Notifications() {
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3</div>
+              <div className="text-2xl font-bold">{alertsCount}</div>
               <p className="text-xs text-muted-foreground">Require attention</p>
             </CardContent>
           </Card>
@@ -157,7 +294,7 @@ export default function Notifications() {
               <Settings className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">5</div>
+              <div className="text-2xl font-bold">{activeSettingsCount}</div>
               <p className="text-xs text-muted-foreground">Active categories</p>
             </CardContent>
           </Card>
@@ -175,7 +312,7 @@ export default function Notifications() {
                     </CardTitle>
                     <CardDescription>Your latest alerts and updates</CardDescription>
                   </div>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead}>
                     Mark all as read
                   </Button>
                 </div>
@@ -188,6 +325,7 @@ export default function Notifications() {
                       className={`p-4 rounded-lg border-l-4 ${getNotificationColor(notification.type)} ${
                         notification.read ? 'bg-muted/20' : 'bg-muted/40'
                       } hover:bg-muted/50 transition-colors cursor-pointer`}
+                      onClick={() => handleNotificationClick(notification.id)}
                     >
                       <div className="flex items-start gap-3">
                         {getNotificationIcon(notification.type)}
@@ -226,10 +364,13 @@ export default function Notifications() {
                     <div className="font-medium">{setting.category}</div>
                     <div className="text-xs text-muted-foreground">{setting.description}</div>
                   </div>
-                  <Switch checked={setting.enabled} />
+                  <Switch 
+                    checked={setting.enabled} 
+                    onCheckedChange={() => handleSettingToggle(index)}
+                  />
                 </div>
               ))}
-              <Button className="w-full hover-glow">
+              <Button className="w-full hover-glow" onClick={handleSavePreferences}>
                 Save Preferences
               </Button>
             </CardContent>

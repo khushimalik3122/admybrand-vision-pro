@@ -33,9 +33,10 @@ export function DashboardHeader() {
   }
 
   const handleProfileUpdate = () => {
+    navigate('/settings')
     toast({
       title: "Profile Settings",
-      description: "Profile update feature will be available soon",
+      description: "Navigated to profile settings",
     })
   }
 
@@ -153,10 +154,6 @@ export function DashboardHeader() {
             <DropdownMenuItem className="cursor-pointer" onClick={handleProfileUpdate}>
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/settings')}>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="cursor-pointer" onClick={handleLogout}>

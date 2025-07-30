@@ -1,5 +1,8 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { useNavigate } from "react-router-dom"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,21 +16,47 @@ import { Badge } from "@/components/ui/badge"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { useToast } from "@/hooks/use-toast"
 import { useTheme } from "@/components/theme-provider"
-import { User, Shield, Bell, Palette, Key, Download, Camera, Save, Check } from "lucide-react"
+import { User, Shield, Bell, Palette, Key, Download, Camera, Save, Check, Upload, LogOut, RefreshCw } from "lucide-react"
 
-interface ProfileForm {
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  company: string
-  role: string
-}
+// Form validation schema
+const profileFormSchema = z.object({
+  firstName: z.string().min(2, "First name must be at least 2 characters"),
+  lastName: z.string().min(2, "Last name must be at least 2 characters"),
+  email: z.string().email("Please enter a valid email address"),
+  phone: z.string().min(10, "Please enter a valid phone number"),
+  company: z.string().min(2, "Company name must be at least 2 characters"),
+  role: z.string().min(1, "Please select a role")
+})
+
+type ProfileForm = z.infer<typeof profileFormSchema>
+
+const passwordFormSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string().min(1, "Please confirm your password")
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"]
+})
+
+type PasswordForm = z.infer<typeof passwordFormSchema>
 
 export default function Settings() {
   const { toast } = useToast()
   const { theme, setTheme } = useTheme()
+  const navigate = useNavigate()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [profileImage, setProfileImage] = useState("https://github.com/shadcn.png")
+  const [isUploading, setIsUploading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [profileData, setProfileData] = useState({
+    firstName: "John",
+    lastName: "Doe",
+    email: "john.doe@example.com",
+    phone: "+1 (555) 123-4567",
+    company: "Digital Agency Co.",
+    role: "manager"
+  })
   const [notifications, setNotifications] = useState({
     campaignPerformance: true,
     budgetWarnings: true,
@@ -46,49 +75,206 @@ export default function Settings() {
   })
 
   const profileForm = useForm<ProfileForm>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: profileData
+  })
+
+  // Update form when profile data changes
+  useEffect(() => {
+    profileForm.reset(profileData)
+  }, [profileData, profileForm])
+
+  const passwordForm = useForm<PasswordForm>({
+    resolver: zodResolver(passwordFormSchema),
     defaultValues: {
-      firstName: "John",
-      lastName: "Doe", 
-      email: "john.doe@example.com",
-      phone: "+1 (555) 123-4567",
-      company: "Digital Agency Co.",
-      role: "manager"
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: ""
     }
   })
 
-  const handleProfileSubmit = (data: ProfileForm) => {
-    toast({
-      title: "Profile Updated",
-      description: "Your profile has been updated successfully",
-    })
+  const handleProfileSubmit = async (data: ProfileForm) => {
+    setIsLoading(true)
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Update the profile data state to persist changes
+      setProfileData(data)
+      
+      // In a real app, you would send this data to your backend
+      console.log('Profile data updated:', data)
+      
+      // Store in localStorage for persistence across sessions
+      localStorage.setItem('userProfile', JSON.stringify(data))
+      
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handlePhotoChange = () => {
-    // Simulate photo upload
-    const photos = [
-      "https://github.com/shadcn.png",
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face"
-    ]
-    const randomPhoto = photos[Math.floor(Math.random() * photos.length)]
-    setProfileImage(randomPhoto)
-    toast({
-      title: "Photo Updated",
-      description: "Your profile photo has been changed",
-    })
+  const handlePhotoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File",
+        description: "Please select an image file",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please select an image smaller than 5MB",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsUploading(true)
+    
+    try {
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file)
+      
+      // Simulate upload delay
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      
+      // In a real app, you would upload to your server/cloud storage
+      setProfileImage(previewUrl)
+      
+      toast({
+        title: "Photo Updated",
+        description: "Your profile photo has been changed successfully",
+      })
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload photo. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsUploading(false)
+    }
   }
 
-  const handlePasswordUpdate = () => {
-    toast({
-      title: "Password Updated",
-      description: "Your password has been changed successfully",
-    })
+  const triggerFileInput = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handlePasswordUpdate = async (data: PasswordForm) => {
+    setIsLoading(true)
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // In a real app, you would verify current password and update
+      console.log('Password update requested')
+      
+      passwordForm.reset()
+      
+      toast({
+        title: "Password Updated",
+        description: "Your password has been changed successfully",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update password. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleNotificationSave = () => {
+    // Store notification preferences in localStorage
+    localStorage.setItem('notificationPreferences', JSON.stringify(notifications))
+    
     toast({
       title: "Preferences Saved", 
       description: "Your notification preferences have been updated",
+    })
+  }
+
+  const handleLogout = () => {
+    // Clear user data and redirect
+    localStorage.removeItem('userProfile')
+    localStorage.removeItem('notificationPreferences')
+    localStorage.removeItem('authToken')
+    
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out",
+      variant: "destructive"
+    })
+    
+    // Simulate logout delay and redirect
+    setTimeout(() => {
+      window.location.reload()
+    }, 1500)
+  }
+
+  const handleDataExport = () => {
+    const exportData = {
+      profile: profileData,
+      notifications: notifications,
+      integrations: integrations,
+      exportDate: new Date().toISOString()
+    }
+    
+    const csvData = [
+      ['Settings Export', new Date().toLocaleString()],
+      [''],
+      ['PROFILE INFORMATION'],
+      ['Field', 'Value'],
+      ['First Name', profileData.firstName],
+      ['Last Name', profileData.lastName],
+      ['Email', profileData.email],
+      ['Phone', profileData.phone],
+      ['Company', profileData.company],
+      ['Role', profileData.role],
+      [''],
+      ['NOTIFICATION PREFERENCES'],
+      ['Setting', 'Enabled'],
+      ...Object.entries(notifications).map(([key, value]) => [key, value ? 'Yes' : 'No']),
+      [''],
+      ['INTEGRATIONS'],
+      ['Platform', 'Status'],
+      ...Object.entries(integrations).map(([key, value]) => [key, value])
+    ]
+    
+    const csvContent = csvData.map(row => row.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `settings-export-${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    
+    toast({
+      title: "Export Complete",
+      description: "Your settings have been exported to CSV",
     })
   }
 
@@ -112,13 +298,32 @@ export default function Settings() {
   }
 
   const generateApiKey = () => {
-    const apiKey = 'admybrand_' + Math.random().toString(36).substring(2, 15)
+    const apiKey = 'admybrand_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
     navigator.clipboard.writeText(apiKey)
+    
+    // Store API key in localStorage
+    localStorage.setItem('apiKey', apiKey)
+    
     toast({
       title: "API Key Generated",
-      description: "New API key copied to clipboard",
+      description: "New API key generated and copied to clipboard",
     })
   }
+
+  // Load saved data on component mount
+  useEffect(() => {
+    const savedProfile = localStorage.getItem('userProfile')
+    const savedNotifications = localStorage.getItem('notificationPreferences')
+    
+    if (savedProfile) {
+      const parsed = JSON.parse(savedProfile)
+      setProfileData(parsed)
+    }
+    
+    if (savedNotifications) {
+      setNotifications(JSON.parse(savedNotifications))
+    }
+  }, [])
 
   return (
     <DashboardLayout>
@@ -127,6 +332,26 @@ export default function Settings() {
           <div>
             <h1 className="text-3xl font-bold gradient-text">Settings</h1>
             <p className="text-muted-foreground">Manage your account preferences and dashboard configuration</p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDataExport}
+              className="hover-glow"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export Settings
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleLogout}
+              className="hover-glow"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
           </div>
         </div>
 
@@ -152,19 +377,33 @@ export default function Settings() {
                 <div className="flex items-center gap-6">
                   <Avatar className="w-20 h-20 ring-2 ring-primary/20">
                     <AvatarImage src={profileImage} />
-                    <AvatarFallback className="bg-gradient-primary text-white text-lg">JD</AvatarFallback>
+                    <AvatarFallback className="bg-gradient-primary text-white text-lg">
+                      {profileData.firstName.charAt(0).toUpperCase()}{profileData.lastName.charAt(0).toUpperCase()}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      className="hidden"
+                    />
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={handlePhotoChange}
+                      onClick={triggerFileInput}
+                      disabled={isUploading}
                       className="hover-glow"
                     >
-                      <Camera className="w-4 h-4 mr-2" />
-                      Change Photo
+                      {isUploading ? (
+                        <Upload className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Camera className="w-4 h-4 mr-2" />
+                      )}
+                      {isUploading ? 'Uploading...' : 'Change Photo'}
                     </Button>
-                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG or GIF. Max size 2MB.</p>
+                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG or GIF. Max size 5MB.</p>
                   </div>
                 </div>
                 
@@ -261,9 +500,13 @@ export default function Settings() {
                       />
                     </div>
                     
-                    <Button type="submit" className="hover-glow">
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Changes
+                    <Button type="submit" className="hover-glow" disabled={isLoading}>
+                      {isLoading ? (
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      {isLoading ? 'Saving...' : 'Save Changes'}
                     </Button>
                   </form>
                 </Form>
@@ -319,24 +562,57 @@ export default function Settings() {
                 
                 <div className="space-y-4 pt-6 border-t border-border/50">
                   <h4 className="font-medium">Change Password</h4>
-                  <div className="grid gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="currentPassword">Current Password</Label>
-                      <Input id="currentPassword" type="password" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="newPassword">New Password</Label>
-                      <Input id="newPassword" type="password" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                      <Input id="confirmPassword" type="password" />
-                    </div>
-                  </div>
-                  <Button variant="outline" className="hover-glow" onClick={handlePasswordUpdate}>
-                    <Key className="w-4 h-4 mr-2" />
-                    Update Password
-                  </Button>
+                  <Form {...passwordForm}>
+                    <form onSubmit={passwordForm.handleSubmit(handlePasswordUpdate)} className="space-y-4">
+                      <FormField
+                        control={passwordForm.control}
+                        name="currentPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Current Password</FormLabel>
+                            <FormControl>
+                              <Input type="password" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={passwordForm.control}
+                        name="newPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>New Password</FormLabel>
+                            <FormControl>
+                              <Input type="password" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={passwordForm.control}
+                        name="confirmPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Confirm New Password</FormLabel>
+                            <FormControl>
+                              <Input type="password" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button type="submit" variant="outline" className="hover-glow" disabled={isLoading}>
+                        {isLoading ? (
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Key className="w-4 h-4 mr-2" />
+                        )}
+                        {isLoading ? 'Updating...' : 'Update Password'}
+                      </Button>
+                    </form>
+                  </Form>
                 </div>
               </CardContent>
             </Card>
@@ -373,7 +649,7 @@ export default function Settings() {
                     />
                   </div>
                 ))}
-                <Button className="hover-glow" onClick={handleNotificationSave}>
+                <Button className="hover-glow" onClick={handleNotificationSave} disabled={isLoading}>
                   <Check className="w-4 h-4 mr-2" />
                   Save Preferences
                 </Button>
