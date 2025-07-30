@@ -1,4 +1,4 @@
-import { Moon, Sun, Bell, Search, User } from "lucide-react"
+import { Moon, Sun, Bell, Search, User, Settings, LogOut, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -13,9 +13,65 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useTheme } from "@/components/theme-provider"
 import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 
 export function DashboardHeader() {
   const { theme, setTheme } = useTheme()
+  const { toast } = useToast()
+  const navigate = useNavigate()
+  const [notificationCount, setNotificationCount] = useState(3)
+
+  const handleNotificationClick = () => {
+    navigate('/notifications')
+    setNotificationCount(0)
+    toast({
+      title: "Notifications",
+      description: "Navigated to notifications page",
+    })
+  }
+
+  const handleProfileUpdate = () => {
+    toast({
+      title: "Profile Settings",
+      description: "Profile update feature will be available soon",
+    })
+  }
+
+  const handleLogout = () => {
+    toast({
+      title: "Logout Successful",
+      description: "You have been logged out successfully",
+      variant: "destructive"
+    })
+    // Simulate logout - in real app, clear auth tokens and redirect
+    setTimeout(() => {
+      window.location.reload()
+    }, 1500)
+  }
+
+  const handleDownloadReport = () => {
+    toast({
+      title: "Download Started",
+      description: "Your analytics report is being prepared for download",
+    })
+    
+    // Simulate CSV download
+    const csvContent = "data:text/csv;charset=utf-8," + 
+      "Campaign,Impressions,Clicks,Conversions,Revenue\n" +
+      "Facebook Ads,45000,1200,156,$3200\n" +
+      "Google Ads,38000,1100,189,$4100\n" +
+      "Instagram,28000,850,98,$2400\n"
+    
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", "admybrand-analytics-report.csv")
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   return (
     <header className="h-16 border-b border-border/50 glass-card flex items-center justify-between px-6 sticky top-0 z-50">
@@ -45,14 +101,31 @@ export function DashboardHeader() {
         </Button>
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative hover-glow">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="relative hover-glow"
+          onClick={handleNotificationClick}
+        >
           <Bell className="h-5 w-5" />
-          <Badge 
-            variant="destructive" 
-            className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
-          >
-            3
-          </Badge>
+          {notificationCount > 0 && (
+            <Badge 
+              variant="destructive" 
+              className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
+            >
+              {notificationCount}
+            </Badge>
+          )}
+        </Button>
+
+        {/* Download Report */}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="hover-glow"
+          onClick={handleDownloadReport}
+        >
+          <Download className="h-5 w-5" />
         </Button>
 
         {/* User Menu */}
@@ -77,15 +150,17 @@ export function DashboardHeader() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer">
+            <DropdownMenuItem className="cursor-pointer" onClick={handleProfileUpdate}>
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer">
+            <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/settings')}>
+              <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer">
+            <DropdownMenuItem className="cursor-pointer" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>

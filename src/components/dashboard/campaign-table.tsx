@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react"
 import { ArrowUpDown, ChevronLeft, ChevronRight, Search, Download } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,6 +32,7 @@ export function CampaignTable() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const { toast } = useToast()
 
   const filteredData = useMemo(() => {
     return campaignData.filter(campaign =>
@@ -95,9 +97,14 @@ export function CampaignTable() {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'campaigns.csv'
+    a.download = 'admybrand-campaigns.csv'
     a.click()
     window.URL.revokeObjectURL(url)
+    
+    toast({
+      title: "Export Successful",
+      description: "Campaign data exported to CSV successfully",
+    })
   }
 
   return (
