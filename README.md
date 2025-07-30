@@ -2,7 +2,7 @@
 
 ## Project info
 
-**URL**: https://admybrand-vision-pro.lovable.app
+
 
 ## How can I edit this code?
 
