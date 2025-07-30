@@ -5,7 +5,7 @@
   <p>A modern, responsive analytics platform built with React, TypeScript, and shadcn/ui</p>
 </div>
 
-## 📋 Table of Contents
+##  Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
@@ -59,6 +59,7 @@ AdmyBrand Vision Pro is a comprehensive analytics dashboard designed for digital
 - **React 18** - Modern React with hooks and functional components
 - **TypeScript** - Type-safe development
 - **Vite** - Fast build tool and development server
+
 
 ### UI & Styling
 - **shadcn/ui** - Modern component library
@@ -212,91 +213,17 @@ The application supports dark/light themes with system preference detection. The
 ### Environment Variables
 Create a `.env` file for environment-specific configurations:
 ```
-VITE_API_URL=your_api_url
+VITE_API_URL=_api_url
 VITE_APP_NAME=AdmyBrand Vision Pro
 ```
 
 ##  Support
 
-For support, email khushimalik3122@example.com or create an issue in the GitHub repository.
+For support, email khushimalik511263@gmail.com or create an issue in the GitHub repository.
 
 ---
 
 <div align="center">
-  <p>Built with ❤️ by the AdmyBrand team</p>
+  <p>Built with ❤️ by khushimalik</p>
   <p>© 2024 AdmyBrand Vision Pro. All rights reserved.</p>
 </div>
-- Tailwind CSS
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Project info
-
-
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone https://github.com/khushimalik3122/admybrand-vision-pro
-
-# Step 2: Navigate to the project directory.
-cd admybrand-vision-pro
-
-# Step 3: Install the necessary dependencies.
-npm install
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-
